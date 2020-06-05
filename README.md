@@ -1,8 +1,8 @@
-import_tes
-==========
+Import TEIs
+===========
 
-`import_tes.py` is an example script to demonstrate bulk-importing DHIS2
-tracked entities as CommCare cases.
+`import_teis.py` is an example script to demonstrate bulk-importing
+DHIS2 Tracked Entity Instances as CommCare cases.
 
 Requires Python 3.5 or higher.
 
@@ -15,11 +15,11 @@ Requires Python 3.5 or higher.
 2. Customize constants at the start of the script, and customize the
    `get_name()` function, if necessary:
 
-        $ $EDITOR import_tes.py
+        $ $EDITOR import_teis.py
 
 3. Run:
 
-        $ python3 import_tes.py
+        $ python3 import_teis.py
 
 
 ### Improvements

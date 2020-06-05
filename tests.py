@@ -1,13 +1,13 @@
 import doctest
 import unittest
 
-import import_tes
+import import_teis
 
 
 class DocTests(unittest.TestCase):
 
     def test_doctests(self):
-        results = doctest.testmod(import_tes)
+        results = doctest.testmod(import_teis)
         self.assertEqual(results.failed, 0)
 
 

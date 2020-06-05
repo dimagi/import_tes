@@ -8,7 +8,7 @@ Usage:
 2. Customize the ``get_name()`` function, if necessary.
 3. Run::
 
-        $ python3 import_tes.py
+        $ python3 import_teis.py
 
 """
 from contextlib import contextmanager
