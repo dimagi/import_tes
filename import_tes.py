@@ -46,6 +46,7 @@ ORG_UNIT_MAP = {
     # Tonkolili
     # Western Area
 }
+BASE_URL = 'https://www.commcarehq.org/'
 
 
 def get_tracked_entities_from_dhis2() -> Iterable[dict]:
@@ -195,8 +196,8 @@ def bulk_upload_cases(tempfile):
     Uploads case data stored in ``tempfile`` to CommCare HQ. Returns a
     status URL if upload succeeds. Raises an exception if upload fails.
     """
-    base_url = 'https://www.commcarehq.org'
-    url = f'{base_url}/a/{DOMAIN}/importer/excel/bulk_upload_api/'
+    endpoint = f'/a/{DOMAIN}/importer/excel/bulk_upload_api/'
+    url = prefix_base_url(endpoint)
     data = {
         'case_type': CASE_TYPE,
         'search_field': 'external_id',
@@ -209,6 +210,22 @@ def bulk_upload_cases(tempfile):
     response = requests.post(url, data, files=files, auth=auth)
     response.raise_for_status()
     return response.json()['status_url']
+
+
+def prefix_base_url(endpoint):
+    """
+    Returns ``BASE_URL`` + ``endpoint`` with the right forward slashes.
+
+    >>> BASE_URL = 'https://play.dhis2.org/dev/'
+    >>> prefix_base_url('/api/trackedEntityInstances')
+    'https://play.dhis2.org/dev/api/trackedEntityInstances'
+
+    >>> BASE_URL = 'https://play.dhis2.org/dev'
+    >>> prefix_base_url('api/trackedEntityInstances')
+    'https://play.dhis2.org/dev/api/trackedEntityInstances'
+
+    """
+    return '/'.join((BASE_URL.rstrip('/'), endpoint.lstrip('/')))
 
 
 if __name__ == '__main__':
