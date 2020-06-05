@@ -5,7 +5,7 @@ CommCare cases.
 
 Usage:
 1. Customize constants at the start of the script.
-2. Address "TODO" comments in the code.
+2. Customize the ``get_name()`` function, if necessary.
 3. Run::
 
         $ python3 import_tes.py
@@ -18,12 +18,21 @@ from typing import Iterable
 import requests
 import tablib
 
-DOMAIN = 'my-project-space'
+
+# TODO: Configure the following constants:
+
+# CommCare authentication details:
+COMMCARE_PROJECT_SPACE = 'my-project-space'
 COMMCARE_USERNAME = 'user@example.com'
 COMMCARE_PASSWORD = 's3cret'
 
-CASE_TYPE = 'person'
+# The CommCare case type to be imported:
+COMMCARE_CASE_TYPE = 'person'
+
+# Map DHIS2 tracked entity attributes and JSON properties to CommCare
+# case properties.
 CASE_PROPERTY_MAP = {
+    # DHIS2 TEI property (as given in JSON): CommCare case property
     'trackedEntityInstance': 'external_id',
     'orgUnit': 'owner_id',
     'attributes': {
@@ -31,7 +40,10 @@ CASE_PROPERTY_MAP = {
         'w75KJ2mc4zz': 'first_name',
     }
 }
+
+# Map DHIS2 organisation units to CommCare locations.
 ORG_UNIT_MAP = {
+    # DHIS2 OrgUnit ID: CommCare location ID
     'O6uvpzGd5pu': 'c0ffeeee-b450-4f9c-9fdb-c8f855f0c531',  # Bo
     # Bombali
     # Bonthe
@@ -46,7 +58,29 @@ ORG_UNIT_MAP = {
     # Tonkolili
     # Western Area
 }
-BASE_URL = 'https://www.commcarehq.org/'
+
+# If a TEI has an organisation unit that is not mapped to a CommCare
+# location, should an error be raised? If set to `False`, the TEI will
+# be skipped.
+RAISE_ERROR_ON_MISSING_ORG_UNIT = True
+
+# The URL of the DHIS2 server and path to the API (excluding "api/"):
+DHIS2_BASE_URL = 'https://play.dhis2.org/dev/'
+DHIS2_USERNAME = 'admin'
+DHIS2_PASSWORD = 'district'
+
+# API request parameters used for filtering the TEIs to be imported:
+TEI_REQUEST_PARAMS = {
+    'ou': 'ImspTQPwCqd',  # Sierra Leone
+    'trackedEntityType': 'nEenWmSyUEp',  # Person
+    # 'program': 'uy2gU8kT1jF',  # MNCH / PNC (Adult Woman)
+}
+
+# Optional constants:
+COMMCARE_BASE_URL = 'https://www.commcarehq.org/'
+DHIS2_PAGE_SIZE = 50
+
+# End of configurable constants
 
 
 def get_tracked_entities_from_dhis2() -> Iterable[dict]:
@@ -77,18 +111,27 @@ def get_tracked_entities_from_dhis2() -> Iterable[dict]:
         }
 
     """
-    raise NotImplementedError
-    # TODO: Left as an exercise for the reader
-    # For example:
-    # url = 'https://play.dhis2.org/dev/api/trackedEntityInstances'
-    # params = {
-    #     'ou': 'ImspTQPwCqd',  # Sierra Leone
-    #     'trackedEntityType': 'nEenWmSyUEp'  # Person
-    # }
-    # headers = {'Accept': 'application/json'}
-    # auth = ('admin', 'district')
-    # response = requests.get(url, params, headers=headers, auth=auth)
-    # return response.json()['trackedEntityInstances']
+    endpoint = '/api/trackedEntityInstances'
+    url = prefix_base_url(DHIS2_BASE_URL, endpoint)
+    params = {
+        **TEI_REQUEST_PARAMS,
+        'paging': 'True',
+        'pageSize': DHIS2_PAGE_SIZE,
+        'page': 1,
+    }
+    headers = {'Accept': 'application/json'}
+    auth = (DHIS2_USERNAME, DHIS2_PASSWORD)
+    while True:
+        response = requests.get(url, params, headers=headers, auth=auth)
+        teis = response.json()['trackedEntityInstances']
+        for tei in teis:
+            yield tei
+        if len(teis) < DHIS2_PAGE_SIZE:
+            # The "trackedEntityInstances" endpoint does not give us
+            # paging data like some other endpoints. So if we didn't get
+            # a full page of results, we know we're on the last page.
+            return
+        params['page'] += 1
 
 
 def map_tracked_entity_attributes(tracked_entities) -> Iterable[dict]:
@@ -121,15 +164,26 @@ def map_tracked_entity_attributes(tracked_entities) -> Iterable[dict]:
         dhis2_id_property = CASE_PROPERTY_MAP['trackedEntityInstance']
         org_unit_property = CASE_PROPERTY_MAP['orgUnit']
 
+        name = get_name(tracked_entity)
+        tei_id = tracked_entity['trackedEntityInstance']
         org_unit = tracked_entity['orgUnit']
-        # Raises KeyError if org unit not found.
-        # TODO: Change to correct behaviour (skip? log error? raise exception?)
-        # Left as an exercise to the reader
+        if org_unit not in ORG_UNIT_MAP:
+            if RAISE_ERROR_ON_MISSING_ORG_UNIT:
+                raise KeyError(
+                    'CommCare location cannot be determined for organisation '
+                    f'unit {org_unit!r}. Please add the organisation unit to '
+                    '`ORG_UNIT_MAP`, or set `RAISE_ERROR_ON_MISSING_ORG_UNIT '
+                    '= False`.'
+                )
+            else:
+                print(f'Skipping TEI {tei_id!r} ({name}): Unknown org unit '
+                      f'{org_unit!r}')
+                continue
         commcare_location = ORG_UNIT_MAP[org_unit]
 
         case_properties = {
-            'name': get_name(tracked_entity),
-            dhis2_id_property: tracked_entity['trackedEntityInstance'],
+            'name': name,
+            dhis2_id_property: tei_id,
             org_unit_property: commcare_location,
         }
         for attr in tracked_entity['attributes']:
@@ -158,7 +212,6 @@ def get_name(tracked_entity) -> str:
         'MAY, Isabel'
 
     """
-    # TODO: Customize as required
     attrs = tracked_entity['attributes']
     family_names = [a['value'] for a in attrs if a['attribute'] == 'zDhUuAYrxNC']
     given_names = [a['value'] for a in attrs if a['attribute'] == 'w75KJ2mc4zz']
@@ -196,23 +249,23 @@ def bulk_upload_cases(tempfile):
     Uploads case data stored in ``tempfile`` to CommCare HQ. Returns a
     status URL if upload succeeds. Raises an exception if upload fails.
     """
-    endpoint = f'/a/{DOMAIN}/importer/excel/bulk_upload_api/'
-    url = prefix_base_url(endpoint)
+    endpoint = f'/a/{COMMCARE_PROJECT_SPACE}/importer/excel/bulk_upload_api/'
+    url = prefix_base_url(COMMCARE_BASE_URL, endpoint)
     data = {
-        'case_type': CASE_TYPE,
+        'case_type': COMMCARE_CASE_TYPE,
         'search_field': 'external_id',
         'create_new_cases': 'on',
         'name_column': 'name',
         'comment': 'Imported from DHIS2 tracked entities',
     }
-    files = {'file': (f'{CASE_TYPE}_cases.xlsx', tempfile)}
+    files = {'file': (f'{COMMCARE_CASE_TYPE}_cases.xlsx', tempfile)}
     auth = (COMMCARE_USERNAME, COMMCARE_PASSWORD)
     response = requests.post(url, data, files=files, auth=auth)
     response.raise_for_status()
     return response.json()['status_url']
 
 
-def prefix_base_url(endpoint):
+def prefix_base_url(base_url, endpoint):
     """
     Returns ``BASE_URL`` + ``endpoint`` with the right forward slashes.
 
@@ -225,7 +278,7 @@ def prefix_base_url(endpoint):
     'https://play.dhis2.org/dev/api/trackedEntityInstances'
 
     """
-    return '/'.join((BASE_URL.rstrip('/'), endpoint.lstrip('/')))
+    return '/'.join((base_url.rstrip('/'), endpoint.lstrip('/')))
 
 
 if __name__ == '__main__':

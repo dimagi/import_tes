@@ -12,8 +12,8 @@ Requires Python 3.5 or higher.
 
         $ pip install -r requirements.txt
 
-2. Configure constants, and address "TODO" comments in the script
-    according to your needs: 
+2. Customize constants at the start of the script, and customize the
+   `get_name()` function, if necessary:
 
         $ $EDITOR import_tes.py
 
