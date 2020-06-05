@@ -20,3 +20,12 @@ Requires Python 3.5 or higher.
 3. Run:
 
         $ python3 import_tes.py
+
+
+### Improvements
+
+This script stores usernames and passwords in constants. This is to keep
+the script simple for the sake of illustration. It should not be done in
+practice. Rather use environment variables if the script is to be
+deployed, or prompt the user for credentials if it is used from the
+command line. (Do not pass passwords in command line options.)
