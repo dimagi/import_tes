@@ -80,7 +80,38 @@ TEI_REQUEST_PARAMS = {
 COMMCARE_BASE_URL = 'https://www.commcarehq.org/'
 DHIS2_PAGE_SIZE = 50
 
-# End of configurable constants
+
+# TODO: Confirm `get_name()` uses the right tracked entity attributes
+#       and returns the CommCare case name in the right format:
+def get_name(tracked_entity) -> str:
+    """
+    Returns a name for a given ``tracked_entity``
+
+    e.g. ::
+
+        >>> tracked_entity = {
+        ...     'trackedEntityInstance': 'iHhCKKXHQv6',
+        ...     'orgUnit': 'O6uvpzGd5pu',
+        ...     'attributes': [
+        ...         {'attribute': 'zDhUuAYrxNC', 'value': 'May'},
+        ...         {'attribute': 'w75KJ2mc4zz', 'value': 'Isabel'}
+        ...     ]
+        ... }
+        >>> get_name(tracked_entity)
+        'MAY, Isabel'
+
+    """
+    attrs = tracked_entity['attributes']
+    family_names = [a['value'] for a in attrs if a['attribute'] == 'zDhUuAYrxNC']
+    given_names = [a['value'] for a in attrs if a['attribute'] == 'w75KJ2mc4zz']
+    if family_names and given_names:
+        return f'{family_names[0].upper()}, {given_names[0]}'
+    elif family_names:
+        return family_names[0].upper()
+    elif given_names:
+        return given_names[0]
+
+# End of configuration
 
 
 def get_tracked_entities_from_dhis2() -> Iterable[dict]:
@@ -192,35 +223,6 @@ def map_tracked_entity_attributes(tracked_entities) -> Iterable[dict]:
                 property_name = CASE_PROPERTY_MAP['attributes'][dhis2_id]
                 case_properties[property_name] = attr['value']
         yield case_properties
-
-
-def get_name(tracked_entity) -> str:
-    """
-    Returns a name for a given ``tracked_entity``
-
-    e.g. ::
-
-        >>> tracked_entity = {
-        ...     'trackedEntityInstance': 'iHhCKKXHQv6',
-        ...     'orgUnit': 'O6uvpzGd5pu',
-        ...     'attributes': [
-        ...         {'attribute': 'zDhUuAYrxNC', 'value': 'May'},
-        ...         {'attribute': 'w75KJ2mc4zz', 'value': 'Isabel'}
-        ...     ]
-        ... }
-        >>> get_name(tracked_entity)
-        'MAY, Isabel'
-
-    """
-    attrs = tracked_entity['attributes']
-    family_names = [a['value'] for a in attrs if a['attribute'] == 'zDhUuAYrxNC']
-    given_names = [a['value'] for a in attrs if a['attribute'] == 'w75KJ2mc4zz']
-    if family_names and given_names:
-        return f'{family_names[0].upper()}, {given_names[0]}'
-    elif family_names:
-        return family_names[0].upper()
-    elif given_names:
-        return given_names[0]
 
 
 @contextmanager
