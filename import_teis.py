@@ -269,14 +269,14 @@ def bulk_upload_cases(tempfile):
 
 def prefix_base_url(base_url, endpoint):
     """
-    Returns ``BASE_URL`` + ``endpoint`` with the right forward slashes.
+    Returns ``base_url`` + ``endpoint`` with the right forward slashes.
 
-    >>> BASE_URL = 'https://play.dhis2.org/dev/'
-    >>> prefix_base_url('/api/trackedEntityInstances')
+    >>> prefix_base_url('https://play.dhis2.org/dev/',
+    ...                 '/api/trackedEntityInstances')
     'https://play.dhis2.org/dev/api/trackedEntityInstances'
 
-    >>> BASE_URL = 'https://play.dhis2.org/dev'
-    >>> prefix_base_url('api/trackedEntityInstances')
+    >>> prefix_base_url('https://play.dhis2.org/dev',
+    ...                 'api/trackedEntityInstances')
     'https://play.dhis2.org/dev/api/trackedEntityInstances'
 
     """
