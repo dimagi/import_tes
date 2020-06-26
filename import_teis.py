@@ -5,20 +5,12 @@ CommCare cases.
 
 Usage:
 1. Customize constants at the start of the script.
-2. Customize the ``get_name()`` function, if necessary.
+2. Customize the ``get_name()`` function if necessary.
 3. Run::
 
         $ python3 import_teis.py
 
 """
-from contextlib import contextmanager
-from tempfile import TemporaryFile
-from typing import Iterable
-
-import requests
-import tablib
-
-
 # TODO: Configure the following constants:
 
 # CommCare authentication details:
@@ -76,16 +68,12 @@ TEI_REQUEST_PARAMS = {
     # 'program': 'uy2gU8kT1jF',  # MNCH / PNC (Adult Woman)
 }
 
-# Optional constants:
-COMMCARE_BASE_URL = 'https://www.commcarehq.org/'
-DHIS2_PAGE_SIZE = 50
-
 
 # TODO: Confirm `get_name()` uses the right tracked entity attributes
 #       and returns the CommCare case name in the right format:
 def get_name(tracked_entity) -> str:
     """
-    Returns a name for a given ``tracked_entity``
+    Returns a case name for a given ``tracked_entity``
 
     e.g. ::
 
@@ -112,6 +100,17 @@ def get_name(tracked_entity) -> str:
         return given_names[0]
 
 # End of configuration
+
+
+from contextlib import contextmanager
+from tempfile import TemporaryFile
+from typing import Iterable
+
+import requests
+import tablib
+
+COMMCARE_BASE_URL = 'https://www.commcarehq.org/'
+DHIS2_PAGE_SIZE = 50
 
 
 def get_tracked_entities_from_dhis2() -> Iterable[dict]:
