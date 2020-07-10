@@ -1,8 +1,8 @@
 Import TEIs
 ===========
 
-`import_teis.py` is an example script to demonstrate bulk-importing
-DHIS2 Tracked Entity Instances as CommCare cases.
+`import_teis.py` imports DHIS2 "Quarantine Site" Tracked Entity
+Instances as CommCare "facility" cases.
 
 Requires Python 3.5 or higher.
 
@@ -14,20 +14,13 @@ Requires Python 3.5 or higher.
         $ cd import_tes
         $ pip install -r requirements.txt
 
-2. Configure the constants at the start of the script with your
-   settings, and customize the `get_name()` function if necessary:
+2. Set environment variables for your credentials:
 
-        $ nano import_teis.py
+        $ export DHIS2_USERNAME='example_username'
+        $ export DHIS2_PASSWORD='example.password'
+        $ export COMMCARE_USERNAME='user@example.commcarehq.org'
+        $ export COMMCARE_PASSWORD='example-password'
 
 3. Run:
 
         $ python3 import_teis.py
-
-
-### Improvements
-
-This script stores usernames and passwords in constants. This is to keep
-the script simple for the sake of illustration. It should not be done in
-practice. Rather use environment variables if the script is to be
-deployed, or prompt the user for credentials if it is used from the
-command line. (Do not pass passwords in command line options.)
