@@ -41,19 +41,31 @@ CASE_PROPERTY_MAP = {
     'orgUnit': 'owner_id',
 
     'attributes': {
-        'u440jMnMwBd': 'dhis2_name',  # Name
-        'IykD2cA7f1Z': 'dhis2_type',  # Type
-        'eqf88skHviu': 'dhis2_manager',  # Manager
-        'OT9sulhuFMI': 'dhis2_mobile_no_1',  # Mobile No 1
-        'zefVkrKFzbi': 'dhis2_num_in_quarantine',  # Number in quarantine
-        'M4Si4G6a31S': 'dhis2_start_date',  # Start date
-        'AQpLLbcDBno': 'dhis2_district',  # District
-        'QijMa435eiK': 'dhis2_address',  # Address
-        'kS05m3nd7cy': 'dhis2_zone',  # Chiefdom/Zone/City
-        'zIKV6Bdr8k6': 'dhis2_adults_20plus',  # Adults 20+ years
-        'hOT8lGKKFQG': 'dhis2_children_5to19',  # Children 5-19 years
-        'omixBEAEJxA': 'dhis2_children_under5',  # Children under 5 years
-        'jOODHzJzWde': 'dhis2_remarks',  # Remarks
+        'X0UVSJM0r8Y': (  # Address
+            'quarantine_facility_name',
+            'address',
+        ),
+        'XY2SluAX1nC': 'mobile_number',  # Mobile No 1
+        'dOafaJ8AVoj': 'start_date',  # Start date
+        'weWd2HBcwzK': {  # Type
+            'case_property': 'quarantine_facility_type',
+            'value_map': {
+                'QS_TYPE_SELF': 'self',
+                'QS_TYPE_GOV': 'gov',
+                'QS_TYPE_ORG': 'org',
+            }
+        },
+        'dwgKrnlpXL0': 'number_in_quarantine',  # Number in quarantine
+        'J1ZmgfnCXxA': 'num_chld_under_5',  # Children under 5 years
+        'mCliML3JzL0': 'num_chld_self_fac',  # Children 5-19 years
+        'ZRhH6eyz7Oz': 'num_adults_self_fac',  # Adults 20+ years
+
+        'YUAMGTtigwP': 'dhis2_name',  # Name
+        'BqfnZJKOkhB': 'dhis2_manager',  # Manager
+        'K8i9ZfrGkt1': 'dhis2_district',  # District
+        'hyymts7JjMp': 'dhis2_site_id',  # Site ID
+        'SmW3apOMu3E': 'dhis2_zone',  # Chiefdom/Zone/City
+        'AtcW78731s8': 'dhis2_remarks',  # Remarks
     }
 }
 
@@ -85,34 +97,33 @@ ORG_UNIT_MAP = {
 RAISE_ERROR_ON_MISSING_ORG_UNIT = True
 
 
-# TODO: Fix this for Quarantine Sites
 def get_name(tracked_entity) -> str:
     """
-    Returns a case name for a given ``tracked_entity``
+    Returns the site's address, which CommCare uses as the case's name
 
     e.g. ::
 
         >>> tracked_entity = {
         ...     'trackedEntityInstance': 'iHhCKKXHQv6',
         ...     'orgUnit': 'O6uvpzGd5pu',
-        ...     'attributes': [
-        ...         {'attribute': 'zDhUuAYrxNC', 'value': 'May'},
-        ...         {'attribute': 'w75KJ2mc4zz', 'value': 'Isabel'}
-        ...     ]
+        ...     'attributes': [{
+        ...         'attribute': 'YUAMGTtigwP',
+        ...         'value': 'QSS_5_EXAMPLE_RD_MURRAY_TOWN'
+        ...     },{
+        ...         'attribute': 'X0UVSJM0r8Y',
+        ...         'value': '5 Example Road, Murray Town'
+        ...     }]
         ... }
         >>> get_name(tracked_entity)
-        'MAY, Isabel'
+        '5 Example Road, Murray Town'
 
     """
     attrs = tracked_entity['attributes']
-    family_names = [a['value'] for a in attrs if a['attribute'] == 'zDhUuAYrxNC']
-    given_names = [a['value'] for a in attrs if a['attribute'] == 'w75KJ2mc4zz']
-    if family_names and given_names:
-        return f'{family_names[0].upper()}, {given_names[0]}'
-    elif family_names:
-        return family_names[0].upper()
-    elif given_names:
-        return given_names[0]
+    address = [a['value'] for a in attrs if a['attribute'] == 'X0UVSJM0r8Y']
+    if address:
+        return address[0]
+    else:
+        return 'Address unknown'
 
 
 def get_tracked_entities_from_dhis2() -> Iterable[dict]:
@@ -124,8 +135,8 @@ def get_tracked_entities_from_dhis2() -> Iterable[dict]:
     endpoint = '/api/trackedEntityInstances'
     url = prefix_base_url(DHIS2_BASE_URL, endpoint)
     params = {
-        'trackedEntityType': 'qtKp6wnGc1L',  # Site
-        # 'program': 'MjFF9x9Cka9',  # Quarantine Site Daily Monitoring
+        # 'trackedEntityType': 'qtKp6wnGc1L',  # Site
+        'program': 'MjFF9x9Cka9',  # Quarantine Site Daily Monitoring
         'paging': 'True',
         'pageSize': DHIS2_PAGE_SIZE,
     }
@@ -185,9 +196,38 @@ def map_tracked_entity_attributes(tracked_entities) -> Iterable[dict]:
         for attr in tracked_entity['attributes']:
             if attr['attribute'] in CASE_PROPERTY_MAP['attributes']:
                 dhis2_id = attr['attribute']
-                property_name = CASE_PROPERTY_MAP['attributes'][dhis2_id]
-                case_properties[property_name] = attr['value']
+                case_property = CASE_PROPERTY_MAP['attributes'][dhis2_id]
+                dict_ = get_case_property_values(case_property, attr['value'])
+                case_properties.update(dict_)
         yield case_properties
+
+
+def get_case_property_values(case_property, dhis2_value) -> dict:
+    """
+    Returns a dictionary of case property names and values
+
+    >>> get_case_property_values('order', 'spam')
+    {'order': 'spam'}
+    >>> get_case_property_values({
+    ...     'case_property': 'order',
+    ...     'value_map': {'bacon': 'spam'}
+    ... }, 'bacon')
+    {'order': 'spam'}
+    >>> get_case_property_values(('order', 'menu'), 'spam')
+    {'order': 'spam', 'menu': 'spam'}
+
+    """
+    case_properties = {}
+    if isinstance(case_property, (list, tuple)):
+        for p in case_property:
+            case_properties.update(get_case_property_values(p, dhis2_value))
+    elif isinstance(case_property, str):
+        case_properties[case_property] = dhis2_value
+    elif isinstance(case_property, dict):
+        property_name = case_property['case_property']
+        mapped_value = case_property['value_map'][dhis2_value]
+        case_properties[property_name] = mapped_value
+    return case_properties
 
 
 @contextmanager
@@ -196,14 +236,17 @@ def save_cases(cases):
     Saves cases to a temporary file. Returns the file object as a
     context object. Deletes the file after it has been used.
     """
+    attribute_case_property_names = []
+    for case_property in CASE_PROPERTY_MAP['attributes'].values():
+        attribute_case_property_names.extend(get_property_names(case_property))
     headers = [
         'name',
         *(v for k, v in CASE_PROPERTY_MAP.items() if k != 'attributes'),
-        *(v for v in CASE_PROPERTY_MAP['attributes'].values()),
+        *attribute_case_property_names,
     ]
     data = tablib.Dataset(headers=headers)
     for case in cases:
-        data.append([case[k] for k in headers])
+        data.append([case.get(k) for k in headers])
     with TemporaryFile() as tempfile:
         excel_data = data.export('xlsx')
         tempfile.write(excel_data)
@@ -211,13 +254,31 @@ def save_cases(cases):
         yield tempfile
 
 
+def get_property_names(case_property) -> list:
+    """
+    Returns a list of case property names from a CASE_PROPERTY_MAP value
+
+    >>> get_property_names('order')
+    ['order']
+    >>> get_property_names({'case_property': 'order'})
+    ['order']
+    >>> get_property_names(('order', 'menu'))
+    ['order', 'menu']
+    """
+    if isinstance(case_property, (list, tuple)):
+        return [n for p in case_property for n in get_property_names(p)]
+    if isinstance(case_property, str):
+        return [case_property]
+    if isinstance(case_property, dict):
+        return [case_property['case_property']]
+
+
 def bulk_upload_cases(tempfile):
     """
     Uploads case data stored in ``tempfile`` to CommCare HQ. Returns a
     status URL if upload succeeds. Raises an exception if upload fails.
     """
-    commcare_project_space = os.environ['COMMCARE_PROJECT_SPACE']
-    endpoint = f'/a/{commcare_project_space}/importer/excel/bulk_upload_api/'
+    endpoint = f'/a/{COMMCARE_PROJECT_SPACE}/importer/excel/bulk_upload_api/'
     url = prefix_base_url(COMMCARE_BASE_URL, endpoint)
     data = {
         'case_type': COMMCARE_CASE_TYPE,
