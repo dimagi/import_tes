@@ -192,6 +192,7 @@ def map_tracked_entity_attributes(tracked_entities) -> Iterable[dict]:
             'name': name,
             dhis2_id_property: tei_id,
             org_unit_property: commcare_location,
+            'dhis2_validated': 0,
         }
         for attr in tracked_entity['attributes']:
             if attr['attribute'] in CASE_PROPERTY_MAP['attributes']:
@@ -241,6 +242,7 @@ def save_cases(cases):
         attribute_case_property_names.extend(get_property_names(case_property))
     headers = [
         'name',
+        'dhis2_validated',
         *(v for k, v in CASE_PROPERTY_MAP.items() if k != 'attributes'),
         *attribute_case_property_names,
     ]
