@@ -26,7 +26,7 @@ DHIS2_BASE_URL = 'https://staging.dhis.hisp.org/sl-idsr/'
 DHIS2_PAGE_SIZE = 50
 COMMCARE_BASE_URL = 'https://www.commcarehq.org/'
 COMMCARE_PROJECT_SPACE = 'sl-demo'
-COMMCARE_CASE_TYPE = 'facility'
+COMMCARE_CASE_TYPE = 'quarantine_facility'
 
 # Map DHIS2 tracked entity attributes and JSON properties to CommCare
 # case properties.
