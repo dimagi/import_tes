@@ -55,11 +55,11 @@ CASE_PROPERTY_MAP = {
                 'QS_TYPE_ORG': 'org',
             }
         },
-        'dwgKrnlpXL0': 'number_in_quarantine',  # Number in quarantine
-        'J1ZmgfnCXxA': 'num_chld_under_5',  # Children under 5 years
-        'mCliML3JzL0': 'num_chld_self_fac',  # Children 5-19 years
-        'ZRhH6eyz7Oz': 'num_adults_self_fac',  # Adults 20+ years
 
+        'dwgKrnlpXL0': 'dhis2_number_in_quarantine',  # Number in quarantine
+        'J1ZmgfnCXxA': 'dhis2_num_chld_under_5',  # Children under 5 years
+        'mCliML3JzL0': 'dhis2_num_chld_self_fac',  # Children 5-19 years
+        'ZRhH6eyz7Oz': 'dhis2_num_adults_self_fac',  # Adults 20+ years
         'YUAMGTtigwP': 'dhis2_name',  # Name
         'BqfnZJKOkhB': 'dhis2_manager',  # Manager
         'K8i9ZfrGkt1': 'dhis2_district',  # District
