@@ -99,7 +99,8 @@ RAISE_ERROR_ON_MISSING_ORG_UNIT = True
 
 def get_name(tracked_entity) -> str:
     """
-    Returns the site's address, which CommCare uses as the case's name
+    Returns the site's address, which CommCare uses as the case's name.
+    If the address is not given, transforms the site name.
 
     e.g. ::
 
@@ -107,21 +108,36 @@ def get_name(tracked_entity) -> str:
         ...     'trackedEntityInstance': 'iHhCKKXHQv6',
         ...     'orgUnit': 'O6uvpzGd5pu',
         ...     'attributes': [{
-        ...         'attribute': 'YUAMGTtigwP',
+        ...         'attribute': 'YUAMGTtigwP',  # Name
         ...         'value': 'QSS_5_EXAMPLE_RD_MURRAY_TOWN'
         ...     },{
-        ...         'attribute': 'X0UVSJM0r8Y',
+        ...         'attribute': 'X0UVSJM0r8Y',  # Address
         ...         'value': '5 Example Road, Murray Town'
         ...     }]
         ... }
         >>> get_name(tracked_entity)
         '5 Example Road, Murray Town'
+        >>> tracked_entity = {
+        ...     'trackedEntityInstance': 'iHhCKKXHQv6',
+        ...     'orgUnit': 'O6uvpzGd5pu',
+        ...     'attributes': [{
+        ...         'attribute': 'YUAMGTtigwP',  # Name
+        ...         'value': 'QSS_5_EXAMPLE_RD_MURRAY_TOWN'
+        ...     }]
+        ... }
+        >>> get_name(tracked_entity)
+        '5 Example Rd Murray Town'
 
     """
     attrs = tracked_entity['attributes']
     address = [a['value'] for a in attrs if a['attribute'] == 'X0UVSJM0r8Y']
-    if address:
+    name = [a['value'] for a in attrs if a['attribute'] == 'YUAMGTtigwP']
+    if address and address[0]:
         return address[0]
+    elif name and name[0] and len(name[0] > 4):
+        without_prefix = name[0][4:]
+        underscores_replaced = without_prefix.replace('_', ' ')
+        return underscores_replaced.title()
     else:
         return 'Address unknown'
 
