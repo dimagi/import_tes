@@ -1,108 +1,29 @@
 #!/usr/bin/env python3
-"""
-Example script to demonstrate bulk-importing DHIS2 tracked entities as
-CommCare cases.
-
-Usage:
-1. Customize constants at the start of the script.
-2. Customize the ``get_name()`` function if necessary.
-3. Run::
-
-        $ python3 import_teis.py
-
-"""
 # TODO: Configure the following constants:
 
 # CommCare authentication details:
-COMMCARE_PROJECT_SPACE = 'my-project-space'
+COMMCARE_PROJECT_SPACE = 'demo'
 COMMCARE_USERNAME = 'user@example.com'
-COMMCARE_PASSWORD = 's3cret'
-
-# The CommCare case type to be imported:
-COMMCARE_CASE_TYPE = 'person'
-
-# Map DHIS2 tracked entity attributes and JSON properties to CommCare
-# case properties.
-CASE_PROPERTY_MAP = {
-    # DHIS2 TEI property (as given in JSON): CommCare case property
-    'trackedEntityInstance': 'external_id',
-    'orgUnit': 'owner_id',
-    'attributes': {
-        'zDhUuAYrxNC': 'last_name',
-        'w75KJ2mc4zz': 'first_name',
-    }
-}
-
-# Map DHIS2 organisation units to CommCare locations.
-ORG_UNIT_MAP = {
-    # DHIS2 OrgUnit ID: CommCare location ID
-    'O6uvpzGd5pu': 'c0ffeeee-b450-4f9c-9fdb-c8f855f0c531',  # Bo
-    # Bombali
-    # Bonthe
-    # Kailahun
-    # Kambia
-    # Kenema
-    # Koinadugu
-    # Kono
-    # Moyamba
-    # Port Loko
-    # Pujehun
-    # Tonkolili
-    # Western Area
-}
-
-# If a TEI has an organisation unit that is not mapped to a CommCare
-# location, should an error be raised? If set to `False`, the TEI will
-# be skipped.
-RAISE_ERROR_ON_MISSING_ORG_UNIT = True
+COMMCARE_API_KEY = 'abc123'
 
 # The URL of the DHIS2 server and path to the API (excluding "api/"):
 DHIS2_BASE_URL = 'https://play.dhis2.org/dev/'
 DHIS2_USERNAME = 'admin'
 DHIS2_PASSWORD = 'district'
 
-# API request parameters used for filtering the TEIs to be imported:
-TEI_REQUEST_PARAMS = {
-    'ou': 'ImspTQPwCqd',  # Sierra Leone
-    'trackedEntityType': 'nEenWmSyUEp',  # Person
-    # 'program': 'uy2gU8kT1jF',  # MNCH / PNC (Adult Woman)
+# Map CommCare case properties to DHIS2 data element IDs
+CASE_PROPERTY_MAP = {
+    'live_births_last_month': {
+        'id': 'gQNFkFkObU8',  # Live births
+        'data_set': 'QX4ZTUbOt3a', # Reproductive Health
+    },
 }
-
-
-# TODO: Confirm `get_name()` uses the right tracked entity attributes
-#       and returns the CommCare case name in the right format:
-def get_name(tracked_entity) -> str:
-    """
-    Returns a case name for a given ``tracked_entity``
-
-    e.g. ::
-
-        >>> tracked_entity = {
-        ...     'trackedEntityInstance': 'iHhCKKXHQv6',
-        ...     'orgUnit': 'O6uvpzGd5pu',
-        ...     'attributes': [
-        ...         {'attribute': 'zDhUuAYrxNC', 'value': 'May'},
-        ...         {'attribute': 'w75KJ2mc4zz', 'value': 'Isabel'}
-        ...     ]
-        ... }
-        >>> get_name(tracked_entity)
-        'MAY, Isabel'
-
-    """
-    attrs = tracked_entity['attributes']
-    family_names = [a['value'] for a in attrs if a['attribute'] == 'zDhUuAYrxNC']
-    given_names = [a['value'] for a in attrs if a['attribute'] == 'w75KJ2mc4zz']
-    if family_names and given_names:
-        return f'{family_names[0].upper()}, {given_names[0]}'
-    elif family_names:
-        return family_names[0].upper()
-    elif given_names:
-        return given_names[0]
 
 # End of configuration
 
 
 from contextlib import contextmanager
+from datetime import date
 from tempfile import TemporaryFile
 from typing import Iterable
 
@@ -110,118 +31,71 @@ import requests
 import tablib
 
 COMMCARE_BASE_URL = 'https://www.commcarehq.org/'
-DHIS2_PAGE_SIZE = 50
+COMMCARE_CASE_TYPE = 'facility'
+COMMCARE_PAGE_SIZE = 2
 
 
-def get_tracked_entities_from_dhis2() -> Iterable[dict]:
+def get_facility_cases() -> Iterable[dict]:
+    endpoint = f'/a/{COMMCARE_PROJECT_SPACE}/api/v0.5/case/'
+    url = prefix_base_url(COMMCARE_BASE_URL, endpoint)
+    params = {
+        'type': COMMCARE_CASE_TYPE,
+        'closed': 'false',
+        'limit': COMMCARE_PAGE_SIZE,
+        'offset': 0,
+        'format': 'json',
+    }
+    headers = {'Authorization': f'ApiKey {COMMCARE_USERNAME}:{COMMCARE_API_KEY}'}
+    while True:
+        response = requests.get(url, params, headers=headers)
+        cases = response.json()
+        for case in cases:
+            facility = {
+                'case_id': case['case_id'],
+                'external_id': case['properties']['external_id'],
+                'name': case['properties']['case_name'],
+            }
+            yield facility
+        if len(cases) < COMMCARE_PAGE_SIZE:
+            return
+        params['offset'] += COMMCARE_PAGE_SIZE
+
+
+def set_case_properties(facilities) -> Iterable[dict]:
     """
-    Returns an iterable of dictionaries, as returned by the DHIS2 web
-    API. (Can be a list or a generator. A generator could be useful if
-    the function handles pagination.)
-
-    A tracked entity looks a bit like this. (Some properties have been
-    omitted.) ::
-
-        {
-            'orgUnit': 'ImspTQPwCqd',
-            'trackedEntityInstance': 'iHhCKKXHQv6',
-            'trackedEntityType': 'nEenWmSyUEp',
-            'attributes': [
-                {
-                    'displayName': 'Last name',
-                    'attribute': 'zDhUuAYrxNC',
-                    'value': 'May'
-                },
-                {
-                    'displayName': 'First name',
-                    'attribute': 'w75KJ2mc4zz',
-                    'value': 'Isabel'
-                }
-            ]
-        }
-
+    Fetch all the data elements for the data set, because we don't know
+    in advance what category option combos to query for
     """
-    endpoint = '/api/trackedEntityInstances'
+    # e.g. https://play.dhis2.org/dev/api/dataValueSets?orgUnit=jNb63DIHuwU
+    #   &period=202010
+    #   &dataSet=QX4ZTUbOt3a  <-- The data set of the data element
+    # not https://play.dhis2.org/dev/api/dataValues?ou=jNb63DIHuwU
+    #   &pe=202010
+    #   &de=gQNFkFkObU8  <-- The data element we want
+    #   &co=L4P9VSgHkF6  <-- We don't know this, and without it we get a 409
+
+    endpoint = '/api/dataValueSets'
     url = prefix_base_url(DHIS2_BASE_URL, endpoint)
     params = {
-        **TEI_REQUEST_PARAMS,
-        'paging': 'True',
-        'pageSize': DHIS2_PAGE_SIZE,
-        'page': 1,
+        'period': get_last_month(),
     }
     headers = {'Accept': 'application/json'}
     auth = (DHIS2_USERNAME, DHIS2_PASSWORD)
-    while True:
-        response = requests.get(url, params, headers=headers, auth=auth)
-        teis = response.json()['trackedEntityInstances']
-        for tei in teis:
-            yield tei
-        if len(teis) < DHIS2_PAGE_SIZE:
-            # The "trackedEntityInstances" endpoint does not give us
-            # paging data like some other endpoints. So if we didn't get
-            # a full page of results, we know we're on the last page.
-            return
-        params['page'] += 1
+    for facility in facilities:
+        params['orgUnit'] = facility['external_id']
+        for case_property, data_element in CASE_PROPERTY_MAP.items():
+            params['dataSet'] = data_element['data_set']
+            response = requests.get(url, params, headers=headers, auth=auth)
+            value = 0
+            for data_value in response.json()['dataValues']:
+                if data_value['dataElement'] == data_element['id']:
+                    value += data_value['value']
+            facility[case_property] = value
+        yield facility
 
 
-def map_tracked_entity_attributes(tracked_entities) -> Iterable[dict]:
-    """
-    Takes an iterable of tracked entities, and returns an interable of
-    dictionaries with tracked entity attributes mapped to case property
-    values.
-
-    e.g. ::
-
-        >>> generator = map_tracked_entity_attributes([{
-        ...     'trackedEntityInstance': 'iHhCKKXHQv6',
-        ...     'orgUnit': 'O6uvpzGd5pu',
-        ...     'attributes': [
-        ...         {'attribute': 'zDhUuAYrxNC', 'value': 'May'},
-        ...         {'attribute': 'w75KJ2mc4zz', 'value': 'Isabel'}
-        ...     ]
-        ... }])
-        >>> list(generator) == [{
-        ...     'name': 'MAY, Isabel',
-        ...     'external_id': 'iHhCKKXHQv6',
-        ...     'owner_id': 'c0ffeeee-b450-4f9c-9fdb-c8f855f0c531',
-        ...     'last_name': 'May',
-        ...     'first_name': 'Isabel',
-        ... }]
-        True
-
-    """
-    for tracked_entity in tracked_entities:
-        dhis2_id_property = CASE_PROPERTY_MAP['trackedEntityInstance']
-        org_unit_property = CASE_PROPERTY_MAP['orgUnit']
-
-        name = get_name(tracked_entity)
-        tei_id = tracked_entity['trackedEntityInstance']
-        org_unit = tracked_entity['orgUnit']
-        if org_unit not in ORG_UNIT_MAP:
-            if RAISE_ERROR_ON_MISSING_ORG_UNIT:
-                raise KeyError(
-                    'CommCare location cannot be determined for organisation '
-                    f'unit {org_unit!r}. Please add the organisation unit to '
-                    '`ORG_UNIT_MAP`, or set `RAISE_ERROR_ON_MISSING_ORG_UNIT '
-                    '= False`.'
-                )
-            else:
-                print(f'Skipping TEI {tei_id!r} ({name}): Unknown org unit '
-                      f'{org_unit!r}')
-                continue
-        commcare_location = ORG_UNIT_MAP[org_unit]
-
-        case_properties = {
-            'name': name,
-            dhis2_id_property: tei_id,
-            org_unit_property: commcare_location,
-        }
-        for attr in tracked_entity['attributes']:
-            if attr['attribute'] in CASE_PROPERTY_MAP['attributes']:
-                dhis2_id = attr['attribute']
-                property_name = CASE_PROPERTY_MAP['attributes'][dhis2_id]
-                case_properties[property_name] = attr['value']
-        yield case_properties
+def get_last_month() -> str:
+    return date.today().strftime('%Y%m')
 
 
 @contextmanager
@@ -231,9 +105,10 @@ def save_cases(cases):
     context object. Deletes the file after it has been used.
     """
     headers = [
+        'case_id',
+        'external_id',
         'name',
-        *(v for k, v in CASE_PROPERTY_MAP.items() if k != 'attributes'),
-        *(v for v in CASE_PROPERTY_MAP['attributes'].values()),
+        *CASE_PROPERTY_MAP,
     ]
     data = tablib.Dataset(headers=headers)
     for case in cases:
@@ -260,8 +135,8 @@ def bulk_upload_cases(tempfile):
         'comment': 'Imported from DHIS2 tracked entities',
     }
     files = {'file': (f'{COMMCARE_CASE_TYPE}_cases.xlsx', tempfile)}
-    auth = (COMMCARE_USERNAME, COMMCARE_PASSWORD)
-    response = requests.post(url, data, files=files, auth=auth)
+    headers = {'Authorization': f'ApiKey {COMMCARE_USERNAME}:{COMMCARE_API_KEY}'}
+    response = requests.post(url, data, files=files, headers=headers)
     response.raise_for_status()
     return response.json()['status_url']
 
@@ -283,8 +158,8 @@ def prefix_base_url(base_url, endpoint):
 
 
 if __name__ == '__main__':
-    tracked_entities = get_tracked_entities_from_dhis2()
-    cases = map_tracked_entity_attributes(tracked_entities)
+    cases = get_facility_cases()
+    cases = set_case_properties(cases)
     with save_cases(cases) as tempfile:
         status_url = bulk_upload_cases(tempfile)
     print('Upload successful. Import in progress.')
