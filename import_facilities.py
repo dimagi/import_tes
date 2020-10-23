@@ -32,7 +32,7 @@ import tablib
 
 COMMCARE_BASE_URL = 'https://www.commcarehq.org/'
 COMMCARE_CASE_TYPE = 'facility'
-COMMCARE_PAGE_SIZE = 2
+COMMCARE_PAGE_SIZE = 20
 
 
 def get_facility_cases() -> Iterable[dict]:
@@ -48,7 +48,7 @@ def get_facility_cases() -> Iterable[dict]:
     headers = {'Authorization': f'ApiKey {COMMCARE_USERNAME}:{COMMCARE_API_KEY}'}
     while True:
         response = requests.get(url, params, headers=headers)
-        cases = response.json()
+        cases = response.json()['objects']
         for case in cases:
             facility = {
                 'case_id': case['case_id'],
@@ -89,7 +89,7 @@ def set_case_properties(facilities) -> Iterable[dict]:
             value = 0
             for data_value in response.json()['dataValues']:
                 if data_value['dataElement'] == data_element['id']:
-                    value += data_value['value']
+                    value += int(data_value['value'])
             facility[case_property] = value
         yield facility
 
