@@ -13,9 +13,96 @@ DHIS2_PASSWORD = 'district'
 
 # Map CommCare case properties to DHIS2 data element IDs
 CASE_PROPERTY_MAP = {
-    'live_births_last_month': {
-        'id': 'gQNFkFkObU8',  # Live births
-        'data_set': 'QX4ZTUbOt3a', # Reproductive Health
+    'dhis_hmis_data_discussed': {
+        'id': 'krUiCzsUAZr',  # HMIS Management meetings conducted
+        'data_set': 'q1Es3k3sZem'
+    },
+    'dhis_admissions_in_quarter': {
+        'id': 'yCJBWuhuOLc',  # HMIS Total # of Admissions (including Maternity)
+        'data_set': 'q1Es3k3sZem'
+    },
+    'dhis_suspected_malaria_cases_under_5yrs': {
+        'id': 'ttpMSWCCq6s',  # HMIS17 Malaria Under 5 years  Admissions
+        'data_set': 'uk3Vkwy5cIe'
+    },
+    'dhis_total_budget_for_drugs': {
+        'id': 'P0YGSCM0OKb',  # HMIS Cumulative drug budget
+        'data_set': 'q1Es3k3sZem'
+    },
+    'dhis_expenditure_in_quarter': {
+        'id': 'M2Pkr4zxryN',  # HMIS17 Cumulative actual expenditure in all programmes
+        'data_set': 'uk3Vkwy5cIe'
+    },
+    'dhis_health_facilities_under_hospital_management_supervision': {
+        'id': 'M3HHFh3RDNP',  # ENVT EH # Of Health Facilities In The  District
+        'data_set': 'iTo9FkAJTSl'
+    },
+    'dhis_quarterly_estimated_pregnant_women_in_area': {
+        'id': 'GxqYLY3iWcz',  # CHD EPI Pregnant women
+        'data_set': 'XcgwcDqqE17'
+    },
+    'dhis_ambulances_functional': {
+        'id': 'MRqq82xATzI',  # HMIS # of Functioning Ambulances
+        'data_set': 'q1Es3k3sZem'
+    },
+    'dhis_what_is_the_total_number_of_beds_at_the_facility': {
+        'id': 'asCqjKclllu',  # HMIS Bed Capacity
+        'data_set': 'q1Es3k3sZem'
+    },
+    'dhis_quarterly_estimated_children_under_5_in_area': {
+        'id': 'PVYgza4lLfj',  # CMED Under 5 Population
+        'data_set': 'rkyO2EAX45C'
+    },
+    'dhis_prev_new_smear_positive_cases_cured': {
+        'id': 'gKghGP99qDe',  # TBTO New Smear Positive Cured
+        'data_set': 'VEqRXwmqhM1'
+    },
+    'dhis_prev_new_smear_positive_cases_dead': {
+        'id': 'yssWGMYDkdA',  # TBTO New Smear Positive Died
+        'data_set': 'VEqRXwmqhM1'
+    },
+    'dhis_prev_new_smear_positive_cases_treatment_failure': {
+        'id': 'dmyxAlzfCiK',  # TBTO New Smear Positive Failure
+        'data_set': 'VEqRXwmqhM1'
+    },
+    'dhis_prev_new_eptb_cases_cured': {
+        'id': 'a8nx11YujJz',  # TB New Treatment outcome New EPTB Cured
+        'data_set': 'fOiOJU7Vt2n'
+    },
+    'dhis_prev_new_eptb_cases_treatment_completed': {
+        'id': 'NFRHK1cgHrc',  # TB New Treatment outcome New EPTB Treatment completed
+        'data_set': 'fOiOJU7Vt2n'
+    },
+    'dhis_prev_new_eptb_cases_dead': {
+        'id': 'dzRlRptoj38',  # TBTO EPTB Died
+        'data_set': 'VEqRXwmqhM1'
+    },
+    'dhis_prev_new_eptb_cases_treatment_failure': {
+        'id': 'wNKjjozXyQY',  # TB New Treatment outcome New EPTB Treatment failed
+        'data_set': 'fOiOJU7Vt2n'
+    },
+# TB COMM Number of Sputum sample collection points in the catchment (BU493LnfBTD) not found
+# TB COMM Number of Functional Sputum sample collection points in the catchment (GhUn5j5ajzK) not found
+# NCD CC HIV Status +Ve on ART (E2TaryAVqeT) not found
+    'dhis_village_clinics': {
+        'id': 'gtLvoz94gur',  # CHD IMCI # of Functional Village Clinics Within Catchment
+        'data_set': 'hWDsGIjs16g'
+    },
+    'dhis_cbdas': {
+        'id': 'LGaHPDsUydT',  # HTS Number of CBDA/HSA
+        'data_set': 'wLQlOnKX6yN'
+    },
+    'dhis_village_health_committees': {
+        'id': 'J7fogdejE3j',  # HMIS HM Active village health committees within catchment area
+        'data_set': 'q1Es3k3sZem'
+    },
+    'dhis_households_with_improved_latrines': {
+        'id': 'u5erlSYbxTU',  # ENVT EH # Of Households Owning And Using Improved Sanitary Facilities
+        'data_set': 'iTo9FkAJTSl'
+    },
+    'dhis_households_access_to_clean_water': {
+        'id': 'BDzMvX3y7Kc',  # HMIS # of Households with Access to Safe Drinking Water
+        'data_set': 'q1Es3k3sZem'
     },
 }
 
